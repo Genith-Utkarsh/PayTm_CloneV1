@@ -5,42 +5,40 @@ const jwt = require("jsonwebtoken");
 const secret = process.env.JWT_SECRET;
 const router = express.Router();
 
+const signupSchema = zod.object({
+  username: zod.string(),
+  password: zod.string(),
+  firstName: zod.string(),
+  lastName: zod.string(),
+});
+
 router.post("/signup", async (req, res) => {
-  const userInfo = req.body;
-
-  const schema = zod.object({
-    username: zod.string(),
-    password: zod.string(),
-    firstName: zod.string(),
-    lastName: zod.string(),
-  });
-
-  const responce = schema.safeParse(userInfo);
+  const body = req.body;
+  const { success } = signupSchema.safeParse(body);
 
   // zod validation
-  if (!responce) {
+  if (!success) {
     return res.send("Given inputs doesnot match correct format..");
   }
 
-  const { username } = req.body;
   // Checking if user exist or not in data base
-  const userExists = await User.findOne({ username });
+  const user = await User.findOne({ username: body.username });
 
-  if (userExists) {
+  if (user._id) {
     return res
       .status(409)
       .send("User already exist ... Use different username..");
   }
 
-  const payload = { username };
-  const token = jwt.sign(payload, secret);
-
   try {
-    await User.create(userInfo);
+    const newUser = await User.create(userInfo);
+
+    const payload = { userId: newUser._id };
+    const token = jwt.sign(payload, secret);
 
     res.status(200).json({
       msg: "User created successfully..",
-      tokenId: token,
+      token : token,
     });
   } catch (err) {
     console.log(err);
@@ -49,6 +47,8 @@ router.post("/signup", async (req, res) => {
       .send("Error creating user.. somthing is up with our server");
   }
 });
+
+
 
 router.post("/signin", async (req, res) => {
   const { username, password } = req.body;
