@@ -4,6 +4,7 @@ const User = require("../db/db");
 const jwt = require("jsonwebtoken");
 const authMiddlware = require("../middlewares/middleware");
 const secret = process.env.JWT_SECRET;
+if (!secret) throw new Error("JWT_SECRET not defined");
 const router = express.Router();
 
 const signupSchema = zod.object({
@@ -19,20 +20,18 @@ router.post("/signup", async (req, res) => {
 
   // zod validation
   if (!success) {
-    return res.send("Given inputs doesnot match correct format..");
+    return res.status(400).json({ msg: "Invalid input format" });
   }
 
   // Checking if user exist or not in data base
   const user = await User.findOne({ username: body.username });
 
-  if (user._id) {
-    return res
-      .status(409)
-      .send("User already exist ... Use different username..");
+  if (user) {
+    res.status(409).json({ msg: "User already exists" });
   }
 
   try {
-    const newUser = await User.create(userInfo);
+    const newUser = await User.create(body);
 
     const payload = { userId: newUser._id };
     const token = jwt.sign(payload, secret);
@@ -43,28 +42,26 @@ router.post("/signup", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res
-      .status(501)
-      .send("Error creating user.. somthing is up with our server");
+    return res.status(500).json({ msg: "Server error while creating user" });
   }
 });
 
 
 
 router.post("/signin", async (req, res) => {
-  const { username, password } = req.body;
+  const userBody = req.body;
 
   try {
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username : userBody.username });
     if (!user) {
-      return res.status(411).send("User not found in our database");
+      return res.status(404).json({ msg: "User not found" });
     }
 
-    if (user.password !== password) {
-      return res.status(411).send("Wrong password");
+    if (user.password !== userBody.password) {
+      return res.status(401).json({ msg: "Incorrect password" });
     }
 
-    const payload = { username };
+    const payload = { userId : user._id };
     const token = jwt.sign(payload, secret);
 
     res.status(200).json({
@@ -73,7 +70,7 @@ router.post("/signin", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(501).send("Error while sign in..");
+    return res.status(500).json({ msg: "Server error during sign in" });
   }
 });
 
@@ -87,10 +84,20 @@ const updateBody =  zod.object({
 router.patch("/", authMiddlware, async (req, res) => {
   const {success} = updateBody.safeParse(req.body)
   if(!success){
-    return res.status(411).send("Error updating the contents..")
+    return res.status(400).json({ msg: "Invalid update payload" });
   }
 
-  await User.updateOne({userId : req.userId}, req.body)
+   try {
+      await User.updateOne({_id : req.userId}, req.body)
+      res.status(200).json({
+        msg : "success Updating the info.."
+      })
+   } catch(err){
+    console.log(err)
+    res.status(501).json({
+      msg : "server error during updating info"
+    })
+   }
 })
 
 

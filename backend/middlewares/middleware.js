@@ -1,5 +1,6 @@
 const secret = process.env.JWT_SECRET
 const jwt = require("jsonwebtoken")
+if (!secret) throw new Error("JWT_SECRET not defined");
 
 const authMiddlware = (req, res, next) => {
     const authHeader  = req.headers.authorization
