@@ -5,6 +5,6 @@ const accountRouter = require("./account.js")
 
 
 router.use("/user", userRouter)
-router.user("/account", accountRouter)
+router.use("/account", accountRouter)
 
 module.exports = router
