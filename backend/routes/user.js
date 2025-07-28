@@ -33,14 +33,12 @@ router.post("/signup", async (req, res) => {
   try {
     const newUser = await User.create(body);
 
-    const userId = newUser._id
+    const userId = newUser._id;
 
     await Account.create({
       userId,
-      balance : 1 + Math.random() * 1000
-    })
-
-
+      balance: 1 + Math.random() * 1000,
+    });
 
     const payload = { userId: newUser._id };
     const token = jwt.sign(payload, secret);
@@ -51,29 +49,28 @@ router.post("/signup", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    return res.status(500).json({ message: "Server error while creating user" });
+    return res
+      .status(500)
+      .json({ message: "Server error while creating user" });
   }
 });
 
-
 const signinBody = zod.object({
-  username : zod.string(),
-  password : zod.string()
-})
+  username: zod.string(),
+  password: zod.string(),
+});
 
 router.post("/signin", async (req, res) => {
   const userBody = req.body;
 
-  // zod validation for sign in  
-  const { success } = signinBody.safeParse(userBody)
+  // zod validation for sign in
+  const { success } = signinBody.safeParse(userBody);
 
-  if(!success){
+  if (!success) {
     return res.status(411).json({
-      message : "Wrong inputs"
-    })
+      message: "Wrong inputs",
+    });
   }
-
-
 
   try {
     const user = await User.findOne({ username: userBody.username });
@@ -98,7 +95,6 @@ router.post("/signin", async (req, res) => {
   }
 });
 
-
 // Updating ..
 
 const updateBody = zod.object({
@@ -107,7 +103,6 @@ const updateBody = zod.object({
   lastName: zod.string().optional(),
 });
 
-
 router.patch("/", authMiddlware, async (req, res) => {
   const parsed = updateBody.safeParse(req.body);
   if (!parsed.success) {
@@ -115,7 +110,7 @@ router.patch("/", authMiddlware, async (req, res) => {
   }
 
   try {
-    await User.updateOne({ _id: req.userId }, {$set : parsed.data});
+    await User.updateOne({ _id: req.userId }, { $set: parsed.data });
     res.status(200).json({
       message: "success Updating the info..",
     });
@@ -126,5 +121,40 @@ router.patch("/", authMiddlware, async (req, res) => {
     });
   }
 });
+
+router.get("/bulk", async (req, res) => {
+  const filter = req.query.filter || " ";
+
+  const users = await User.find({
+    $or: [
+      {
+        firstName: {
+          $regex: filter,
+        },
+      },
+      {
+        lastName: {
+          $regex: filter,
+        },
+      },
+    ],
+
+  });
+
+
+
+  res.json({
+    user : users.map(user => ({
+        username : user.username,
+        firstName : user.firstName,
+        lastName : user.lastName,
+        userId : user._id
+    }))
+
+  })
+
+});
+
+
 
 module.exports = router;
