@@ -20,14 +20,14 @@ router.post("/signup", async (req, res) => {
 
   // zod validation
   if (!success) {
-    return res.status(400).json({ msg: "Invalid input format" });
+    return res.status(400).json({ message: "Invalid input format" });
   }
 
   // Checking if user exist or not in data base
   const user = await User.findOne({ username: body.username });
 
   if (user) {
-    res.status(409).json({ msg: "User already exists" });
+    res.status(409).json({ message: "User already exists" });
   }
 
   try {
@@ -46,26 +46,43 @@ router.post("/signup", async (req, res) => {
     const token = jwt.sign(payload, secret);
 
     res.status(200).json({
-      msg: "User created successfully..",
+      message: "User created successfully..",
       token: token,
     });
   } catch (err) {
     console.log(err);
-    return res.status(500).json({ msg: "Server error while creating user" });
+    return res.status(500).json({ message: "Server error while creating user" });
   }
 });
+
+
+const signinBody = zod.object({
+  username : zod.string(),
+  password : zod.string()
+})
 
 router.post("/signin", async (req, res) => {
   const userBody = req.body;
 
+  // zod validation for sign in  
+  const { success } = signinBody.safeParse(userBody)
+
+  if(!success){
+    return res.status(411).json({
+      message : "Wrong inputs"
+    })
+  }
+
+
+
   try {
     const user = await User.findOne({ username: userBody.username });
     if (!user) {
-      return res.status(404).json({ msg: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     if (user.password !== userBody.password) {
-      return res.status(401).json({ msg: "Incorrect password" });
+      return res.status(401).json({ message: "Incorrect password" });
     }
 
     const payload = { userId: user._id };
@@ -81,27 +98,31 @@ router.post("/signin", async (req, res) => {
   }
 });
 
+
+// Updating ..
+
 const updateBody = zod.object({
   password: zod.string().optional(),
   firstName: zod.string().optional(),
   lastName: zod.string().optional(),
 });
 
+
 router.patch("/", authMiddlware, async (req, res) => {
-  const { success } = updateBody.safeParse(req.body);
-  if (!success) {
-    return res.status(400).json({ msg: "Invalid update payload" });
+  const parsed = updateBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: "Invalid update payload" });
   }
 
   try {
-    await User.updateOne({ _id: req.userId }, req.body);
+    await User.updateOne({ _id: req.userId }, {$set : parsed.data});
     res.status(200).json({
-      msg: "success Updating the info..",
+      message: "success Updating the info..",
     });
   } catch (err) {
     console.log(err);
     res.status(501).json({
-      msg: "server error during updating info",
+      message: "server error during updating info",
     });
   }
 });
