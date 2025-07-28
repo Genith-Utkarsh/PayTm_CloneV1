@@ -38,7 +38,7 @@ router.post("/signup", async (req, res) => {
 
     res.status(200).json({
       msg: "User created successfully..",
-      token : token,
+      token: token,
     });
   } catch (err) {
     console.log(err);
@@ -46,13 +46,11 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-
-
 router.post("/signin", async (req, res) => {
   const userBody = req.body;
 
   try {
-    const user = await User.findOne({ username : userBody.username });
+    const user = await User.findOne({ username: userBody.username });
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
@@ -61,7 +59,7 @@ router.post("/signin", async (req, res) => {
       return res.status(401).json({ msg: "Incorrect password" });
     }
 
-    const payload = { userId : user._id };
+    const payload = { userId: user._id };
     const token = jwt.sign(payload, secret);
 
     res.status(200).json({
@@ -74,32 +72,29 @@ router.post("/signin", async (req, res) => {
   }
 });
 
-
-const updateBody =  zod.object({
-  password : zod.string().optional() ,
-  firstName : zod.string().optional(),
-  lastName : zod.string().optional()
-})
+const updateBody = zod.object({
+  password: zod.string().optional(),
+  firstName: zod.string().optional(),
+  lastName: zod.string().optional(),
+});
 
 router.patch("/", authMiddlware, async (req, res) => {
-  const {success} = updateBody.safeParse(req.body)
-  if(!success){
+  const { success } = updateBody.safeParse(req.body);
+  if (!success) {
     return res.status(400).json({ msg: "Invalid update payload" });
   }
 
-   try {
-      await User.updateOne({_id : req.userId}, req.body)
-      res.status(200).json({
-        msg : "success Updating the info.."
-      })
-   } catch(err){
-    console.log(err)
+  try {
+    await User.updateOne({ _id: req.userId }, req.body);
+    res.status(200).json({
+      msg: "success Updating the info..",
+    });
+  } catch (err) {
+    console.log(err);
     res.status(501).json({
-      msg : "server error during updating info"
-    })
-   }
-})
-
-
+      msg: "server error during updating info",
+    });
+  }
+});
 
 module.exports = router;
